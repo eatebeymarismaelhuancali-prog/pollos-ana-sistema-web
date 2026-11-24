@@ -1,0 +1,224 @@
+
+{% extends 'core/base.html' %}
+
+{% block content %}
+
+<style>
+    .dashboard-title {
+        font-weight: 800;
+        color: #252525;
+    }
+
+    .dashboard-subtitle {
+        color: #888;
+        margin-bottom: 28px;
+    }
+
+    .stat-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 24px;
+        border-left: 5px solid #f5c518;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        height: 100%;
+    }
+
+    .stat-card small {
+        color: #777;
+        font-size: 14px;
+    }
+
+    .stat-card h2 {
+        font-size: 30px;
+        font-weight: 800;
+        margin-top: 12px;
+        margin-bottom: 0;
+        color: #252525;
+    }
+
+    .stat-icon {
+        background: #fff4c4;
+        padding: 12px;
+        border-radius: 12px;
+        font-size: 23px;
+    }
+
+    .chart-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        height: 100%;
+    }
+
+    .chart-card h5 {
+        font-weight: 700;
+        color: #252525;
+        margin-bottom: 22px;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+</style>
+
+<!-- ENCABEZADO -->
+<div class="mb-4">
+    <h2 class="dashboard-title">Dashboard</h2>
+    <p class="dashboard-subtitle">
+        Escritorio
+    </p>
+</div>
+
+<!-- TARJETAS ESTADÍSTICAS -->
+<div class="row g-4 mb-4">
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between">
+                <small>Productos</small>
+                <span class="stat-icon">🍗</span>
+            </div>
+            <h2>{{ productos }}</h2>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between">
+                <small>Ventas realizadas</small>
+                <span class="stat-icon">🛒</span>
+            </div>
+            <h2>{{ ventas }}</h2>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between">
+                <small>Pedidos activos</small>
+                <span class="stat-icon">📋</span>
+            </div>
+            <h2>{{ pedidos }}</h2>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between">
+                <small>Total vendido</small>
+                <span class="stat-icon">💰</span>
+            </div>
+            <h2>Bs {{ total }}</h2>
+        </div>
+    </div>
+
+</div>
+
+<!-- GRÁFICOS -->
+<div class="row g-4">
+
+    <!-- GRÁFICO DE VENTAS -->
+    <div class="col-lg-8">
+        <div class="chart-card">
+            <h5>Resumen de ventas</h5>
+            <div class="chart-container">
+                <canvas id="graficoVentas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- GRÁFICO DE PEDIDOS -->
+    <div class="col-lg-4">
+        <div class="chart-card">
+            <h5>Estado de pedidos</h5>
+            <div class="chart-container">
+                <canvas id="graficoPedidos"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Datos de demostración.
+    // Más adelante los conectaremos a Django.
+
+    const ventasChart = new Chart(
+        document.getElementById('graficoVentas'),
+        {
+            type: 'bar',
+            data: {
+                labels: [
+                    'Lunes', 'Martes', 'Miércoles',
+                    'Jueves', 'Viernes', 'Sábado', 'Domingo'
+                ],
+                datasets: [{
+                    label: 'Ventas (Bs)',
+                    data: [150, 230, 180, 320, 270, 450, 390],
+                    backgroundColor: '#f5c518',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        }
+    );
+
+    const pedidosChart = new Chart(
+        document.getElementById('graficoPedidos'),
+        {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    'Pendientes',
+                    'Preparando',
+                    'Listos',
+                    'Finalizados'
+                ],
+                datasets: [{
+                    data: [4, 3, 2, 8],
+                    backgroundColor: [
+                        '#f5c518',
+                        '#ffdc69',
+                        '#d4a000',
+                        '#eeeeee'
+                    ],
+                    borderWidth: 3,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        }
+    );
+</script>
+
+{% endblock %}

@@ -1,0 +1,435 @@
+
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+.comprobante-contenedor {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,.06);
+}
+
+.comprobante-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 15px;
+}
+
+.comprobante-logo {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+}
+
+.comprobante-titulo {
+    font-weight: 800;
+}
+
+.comprobante-total {
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.whatsapp-barra {
+    background: #f1f8f3;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.btn-amarillo {
+    background: #f5c518;
+    color: #252525;
+    border: none;
+    padding: 11px 18px;
+    border-radius: 9px;
+    font-weight: 700;
+}
+
+.btn-amarillo:hover {
+    background: #e2b30b;
+}
+
+.comanda-seccion {
+    display: none;
+}
+
+@media print {
+    .sidebar,
+    .acciones-comprobante,
+    .whatsapp-barra,
+    .alert,
+    .no-imprimir {
+        display: none !important;
+    }
+
+    .layout {
+        display: block !important;
+    }
+
+    .content {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: white !important;
+    }
+
+    .comprobante-contenedor {
+        box-shadow: none;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    @page {
+        size: 80mm auto;
+        margin: 3mm;
+    }
+
+    body {
+        font-size: 11px;
+    }
+
+    .comprobante-logo {
+        width: 55px;
+        height: 55px;
+    }
+
+    .comprobante-total {
+        font-size: 17px;
+    }
+}
+</style>
+
+<div class="mb-4 no-imprimir">
+    <h2 class="fw-bold">Venta registrada</h2>
+    <p class="text-muted">
+        Nota de venta y comanda - POLLOS ANA
+    </p>
+</div>
+
+<div class="comprobante-contenedor">
+
+   
+<!-- ENVÍO DE PDF POR WHATSAPP -->
+<div class="whatsapp-barra no-imprimir">
+
+    <h5 class="fw-bold">
+        Enviar nota de venta por WhatsApp
+    </h5>
+
+    <p class="text-muted small">
+        Descarga la nota en PDF y adjúntala
+        en el chat del cliente.
+    </p>
+
+    <div class="input-group mb-3">
+        <span class="input-group-text">+591</span>
+
+        <input
+            type="tel"
+            id="numeroWhatsapp"
+            class="form-control"
+            placeholder="Número de WhatsApp"
+            maxlength="8"
+            inputmode="numeric"
+        >
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+
+        <a
+            href="{% url 'descargar_nota_pdf' venta.id %}"
+            class="btn-amarillo"
+        >
+            📄 Descargar nota PDF
+        </a>
+
+        <button
+            type="button"
+            class="btn btn-success"
+            onclick="enviarPdfWhatsapp()"
+        >
+            Enviar PDF por WhatsApp
+        </button>
+
+    </div>
+
+</div>
+
+
+    <!-- NOTA DE VENTA -->
+    <div id="notaVenta">
+
+        <div class="comprobante-header">
+
+            <img
+                src="{% static 'core/img/logo.jpg' %}"
+                alt="POLLOS ANA"
+                class="comprobante-logo"
+            >
+
+            <div>
+                <h4 class="comprobante-titulo">
+                    POLLOS ANA
+                </h4>
+
+                <strong>NOTA DE VENTA</strong>
+                <div>Venta N.º {{ venta.id }}</div>
+            </div>
+
+        </div>
+
+        <div class="row mt-3 mb-3">
+            <div class="col-sm-6">
+                <strong>Fecha:</strong>
+                {{ venta.fecha|date:"d/m/Y H:i" }}
+            </div>
+
+            <div class="col-sm-6">
+                <strong>Cajero:</strong>
+                {{ venta.usuario.username }}
+            </div>
+
+            <div class="col-sm-6">
+                <strong>Cliente:</strong>
+                {{ pedido.cliente|default:"Consumidor final" }}
+            </div>
+
+            <div class="col-sm-6">
+                <strong>Canal:</strong>
+                {{ pedido.get_canal_display }}
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for detalle in detalles %}
+                    <tr>
+                        <td>{{ detalle.producto.nombre }}</td>
+                        <td>{{ detalle.cantidad }}</td>
+                        <td>{{ detalle.precio_unitario }}</td>
+                        <td>{{ detalle.subtotal }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="text-end mt-3">
+            <p>
+                Método de pago:
+                <strong>{{ venta.get_metodo_pago_display }}</strong>
+            </p>
+
+            <div class="comprobante-total">
+                TOTAL: Bs {{ venta.total }}
+            </div>
+        </div>
+
+        <p class="text-center mt-4">
+            ¡Gracias por su preferencia!
+        </p>
+
+        <p class="text-center small">
+            Documento interno - No válido como factura fiscal.
+        </p>
+
+    </div>
+
+    <!-- COMANDA -->
+    <div id="comanda" class="comanda-seccion">
+
+        <div class="text-center">
+            <h3 class="fw-bold">POLLOS ANA</h3>
+            <h4>COMANDA DE COCINA</h4>
+            <h5>Pedido #{{ pedido.id }}</h5>
+        </div>
+
+        <hr>
+
+        <p>
+            <strong>Fecha:</strong>
+            {{ pedido.creado|date:"d/m/Y H:i" }}
+        </p>
+
+        <p>
+            <strong>Canal:</strong>
+            {{ pedido.get_canal_display }}
+        </p>
+
+        <p>
+            <strong>Cliente:</strong>
+            {{ pedido.cliente|default:"Sin nombre" }}
+        </p>
+
+        <hr>
+
+        {% for detalle in detalles %}
+        <div class="d-flex justify-content-between mb-2">
+            <strong>{{ detalle.producto.nombre }}</strong>
+            <strong>x{{ detalle.cantidad }}</strong>
+        </div>
+        {% endfor %}
+
+        <hr>
+
+        <strong>Observaciones:</strong>
+        <p>{{ pedido.observaciones|default:"Sin observaciones" }}</p>
+
+    </div>
+
+    <!-- BOTONES -->
+    <div class="acciones-comprobante mt-4">
+
+        <div class="d-flex gap-2 flex-wrap">
+
+            <button
+                type="button"
+                class="btn-amarillo"
+                onclick="imprimirNota()"
+            >
+                🖨️ Imprimir nota de venta
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-dark"
+                onclick="imprimirComanda()"
+            >
+                👨‍🍳 Imprimir comanda
+            </button>
+
+            <a
+                href="{% url 'pos' %}"
+                class="btn btn-outline-secondary"
+            >
+                Nueva venta
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+{{ venta.id|json_script:"venta-id" }}
+{{ venta.total|stringformat:".2f"|json_script:"venta-total" }}
+{{ pedido.get_canal_display|json_script:"pedido-canal" }}
+{{ venta.get_metodo_pago_display|json_script:"venta-metodo" }}
+{{ pedido.cliente|json_script:"pedido-cliente" }}
+
+<script>
+const ventaId = JSON.parse(
+    document.getElementById('venta-id').textContent
+);
+
+const ventaTotal = JSON.parse(
+    document.getElementById('venta-total').textContent
+);
+
+const pedidoCanal = JSON.parse(
+    document.getElementById('pedido-canal').textContent
+);
+
+const ventaMetodo = JSON.parse(
+    document.getElementById('venta-metodo').textContent
+);
+
+const pedidoCliente = JSON.parse(
+    document.getElementById('pedido-cliente').textContent
+);
+
+const productosVenta = [
+    {% for detalle in detalles %}
+    {
+        nombre: "{{ detalle.producto.nombre|escapejs }}",
+        cantidad: {{ detalle.cantidad }},
+        subtotal: "{{ detalle.subtotal }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+function imprimirNota() {
+    document.getElementById('notaVenta').style.display = 'block';
+    document.getElementById('comanda').style.display = 'none';
+
+    window.print();
+}
+
+function imprimirComanda() {
+    document.getElementById('notaVenta').style.display = 'none';
+    document.getElementById('comanda').style.display = 'block';
+
+    window.print();
+}
+
+window.addEventListener('afterprint', () => {
+    document.getElementById('notaVenta').style.display = 'block';
+    document.getElementById('comanda').style.display = 'none';
+});
+
+
+function enviarPdfWhatsapp() {
+    const numero = document.getElementById(
+        'numeroWhatsapp'
+    ).value.replace(/\D/g, '');
+
+    if (!/^[67]\d{7}$/.test(numero)) {
+        alert(
+            'Ingresa un número boliviano válido de 8 dígitos.'
+        );
+        return;
+    }
+
+    const enlacePDF =
+        "{% url 'descargar_nota_pdf' venta.id %}";
+
+    const enlaceWhatsapp =
+        "https://wa.me/591" + numero;
+
+    // Descargar el PDF.
+    const descarga = document.createElement('a');
+    descarga.href = enlacePDF;
+    descarga.download = '';
+    document.body.appendChild(descarga);
+    descarga.click();
+    descarga.remove();
+
+    // Abrir el chat para adjuntar el archivo.
+    const ventana = window.open(
+        enlaceWhatsapp,
+        '_blank',
+        'noopener,noreferrer'
+    );
+
+    if (!ventana) {
+        alert(
+            'El PDF se ha solicitado para descarga. ' +
+            'Permite las ventanas emergentes o abre ' +
+            'WhatsApp manualmente para adjuntarlo.'
+        );
+    }
+}
+
+</script>
+
+{% endblock %}

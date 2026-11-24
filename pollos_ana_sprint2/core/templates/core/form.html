@@ -1,0 +1,1 @@
+{% extends 'core/base.html' %}{% block content %}<h2>{{ titulo }}</h2><form method="post" enctype="multipart/form-data" class="card p-4" style="max-width:600px">{% csrf_token %}{{ form.as_p }}<button class="btn btn-danger">Guardar</button></form>{% endblock %}

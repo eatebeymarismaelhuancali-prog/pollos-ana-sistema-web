@@ -1,0 +1,216 @@
+
+{% extends 'core/base.html' %}
+
+{% block content %}
+
+<style>
+.caja-titulo {
+    font-weight: 800;
+    color: #252525;
+}
+
+.caja-card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.05);
+    margin-bottom: 20px;
+}
+
+.caja-resumen {
+    background: #fff;
+    padding: 22px;
+    border-radius: 15px;
+    border-left: 5px solid #f5c518;
+    height: 100%;
+}
+
+.caja-resumen h3 {
+    font-weight: 800;
+    margin-top: 12px;
+}
+
+.btn-amarillo {
+    background: #f5c518;
+    color: #252525;
+    font-weight: 700;
+    border: none;
+    padding: 11px 20px;
+    border-radius: 9px;
+}
+
+.btn-amarillo:hover {
+    background: #e3b30d;
+}
+</style>
+
+<h2 class="caja-titulo">Control de caja</h2>
+<p class="text-muted">
+    Apertura, movimientos y cierre de caja - POLLOS ANA
+</p>
+
+{% if caja_actual %}
+
+<div class="alert alert-success">
+    🟢 Caja #{{ caja_actual.id }} abierta
+    desde {{ caja_actual.fecha_apertura|date:"d/m/Y H:i" }}
+</div>
+
+<div class="row g-3 mb-4">
+
+    <div class="col-md-6">
+        <div class="caja-resumen">
+            <small class="text-muted">Saldo inicial</small>
+            <h3>Bs {{ caja_actual.monto_inicial }}</h3>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="caja-resumen">
+            <small class="text-muted">Efectivo esperado</small>
+            <h3>Bs {{ efectivo_esperado }}</h3>
+        </div>
+    </div>
+
+</div>
+
+<div class="row g-3">
+
+    <div class="col-lg-6">
+        <div class="caja-card">
+
+            <h5 class="fw-bold">Registrar movimiento</h5>
+
+            <form method="post"
+                  action="{% url 'registrar_movimiento_caja' %}">
+                {% csrf_token %}
+
+                <label class="form-label mt-3">Tipo</label>
+                <select name="tipo" class="form-select" required>
+                    <option value="ingreso">Ingreso</option>
+                    <option value="egreso">Egreso</option>
+                </select>
+
+                <label class="form-label mt-3">Concepto</label>
+                <input name="concepto"
+                       class="form-control"
+                       maxlength="200"
+                       required>
+
+                <label class="form-label mt-3">Monto (Bs)</label>
+                <input type="number"
+                       name="monto"
+                       class="form-control"
+                       min="0.01"
+                       step="0.01"
+                       required>
+
+                <button class="btn-amarillo w-100 mt-3">
+                    Registrar movimiento
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="caja-card">
+
+            <h5 class="fw-bold">Cerrar caja</h5>
+
+            <p class="text-muted">
+                Ingresa el dinero contado físicamente.
+            </p>
+
+            <form method="post"
+                  action="{% url 'cerrar_caja' %}">
+                {% csrf_token %}
+
+                <label class="form-label">Efectivo contado (Bs)</label>
+
+                <input type="number"
+                       name="monto_contado"
+                       class="form-control"
+                       min="0"
+                       step="0.01"
+                       required>
+
+                <button class="btn btn-dark w-100 mt-3">
+                    🔒 Cerrar caja
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="caja-card mt-3">
+    <h5 class="fw-bold">Historial de movimientos</h5>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Concepto</th>
+                    <th>Monto</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for m in movimientos %}
+                <tr>
+                    <td>{{ m.fecha|date:"d/m/Y H:i" }}</td>
+                    <td>{{ m.get_tipo_display }}</td>
+                    <td>{{ m.concepto }}</td>
+                    <td>Bs {{ m.monto }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-muted">
+                        No hay movimientos registrados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+
+<div class="caja-card" style="max-width:600px;">
+
+    <h4 class="fw-bold">🔓 Apertura de caja</h4>
+
+    <p class="text-muted">
+        Ingresa el efectivo inicial para comenzar el turno.
+    </p>
+
+    <form method="post" action="{% url 'abrir_caja' %}">
+        {% csrf_token %}
+
+        <label class="form-label">Monto inicial (Bs)</label>
+
+        <input type="number"
+               name="monto_inicial"
+               class="form-control"
+               min="0"
+               step="0.01"
+               value="0.00"
+               required>
+
+        <button class="btn-amarillo w-100 mt-3">
+            Abrir caja
+        </button>
+
+    </form>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

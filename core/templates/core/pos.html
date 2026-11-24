@@ -1,0 +1,925 @@
+
+{% extends 'core/base.html' %}
+
+{% block content %}
+
+<style>
+.pos-page {
+    color: #292929;
+}
+
+.pos-title {
+    font-weight: 800;
+}
+
+.pos-panel {
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.05);
+}
+
+.pos-search {
+    border: 1px solid #e3e3e3;
+    border-radius: 10px;
+    padding: 12px;
+    width: 100%;
+}
+
+.pos-product {
+    background: #fff;
+    border: 1px solid #ededed;
+    border-radius: 15px;
+    overflow: hidden;
+    height: 100%;
+    transition: .2s;
+}
+
+.pos-product:hover {
+    border-color: #f5c518;
+    box-shadow: 0 5px 16px rgba(0,0,0,.08);
+}
+
+.pos-product img,
+.pos-placeholder {
+    width: 100%;
+    height: 155px;
+    object-fit: cover;
+}
+
+.pos-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff4c4;
+    font-size: 48px;
+}
+
+.pos-product-body {
+    padding: 13px;
+}
+
+.pos-product-name {
+    font-weight: 700;
+    font-size: 14px;
+    min-height: 40px;
+}
+
+.pos-price {
+    color: #a17b00;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.btn-yellow {
+    background: #f5c518;
+    color: #252525;
+    border: none;
+    font-weight: 700;
+    border-radius: 9px;
+    padding: 10px 15px;
+}
+
+.btn-yellow:hover {
+    background: #e2b30b;
+    color: #252525;
+}
+
+.cart-list {
+    min-height: 180px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.cart-item {
+    border-bottom: 1px solid #eeeeee;
+    padding: 12px 0;
+}
+
+.cart-total {
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.payment-total {
+    font-size: 46px;
+    font-weight: 800;
+    color: #d0a000;
+}
+
+.pos-order-panel {
+    position: sticky;
+    top: 20px;
+}
+
+@media(max-width:991px) {
+    .pos-order-panel {
+        position: static;
+    }
+}
+
+/* SELECTOR DE CANAL - POLLOS ANA */
+
+.canal-select {
+    background-color: #ffffff;
+    border: 1px solid #dedede;
+    border-radius: 8px;
+    color: #555555;
+    font-weight: 500;
+    padding: 12px;
+    cursor: pointer;
+}
+
+.canal-select:focus {
+    border-color: #f5c518;
+    box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.2);
+    outline: none;
+}
+
+.canal-select option {
+    background: #ffffff;
+    color: #333333;
+}
+
+</style>
+
+<div class="pos-page">
+
+    <div class="mb-4">
+        <h2 class="pos-title">Punto de venta</h2>
+        <p class="text-muted">
+            Comandero
+        </p>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- CATÁLOGO DE PRODUCTOS -->
+        <div class="col-lg-7">
+
+            <div class="pos-panel">
+
+                <h5 class="fw-bold mb-3">
+                    🍗 Catálogo de productos
+                </h5>
+
+                <input
+                    type="search"
+                    id="buscarProducto"
+                    class="pos-search mb-3"
+                    placeholder="Buscar producto..."
+                >
+
+                <div class="row g-3" id="listaProductos">
+
+                    {% for p in productos %}
+
+                    <div
+                        class="col-6 col-md-4 producto-item"
+                        data-nombre="{{ p.nombre|lower }}"
+                    >
+
+                        <div class="pos-product">
+
+                            {% if p.imagen %}
+                                <img
+                                    src="{{ p.imagen.url }}"
+                                    alt="{{ p.nombre }}"
+                                >
+                            {% else %}
+                                <div class="pos-placeholder">
+                                    🍗
+                                </div>
+                            {% endif %}
+
+                            <div class="pos-product-body">
+
+                                <div class="pos-product-name">
+                                    {{ p.nombre }}
+                                </div>
+
+                                <small class="text-muted">
+                                    {{ p.categoria.nombre }}
+                                </small>
+
+                                <div class="pos-price mt-2">
+                                    Bs {{ p.precio }}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="btn-yellow w-100 mt-2"
+                                    onclick="agregar(
+                                        {{ p.id }},
+                                        '{{ p.nombre|escapejs }}',
+                                        '{{ p.precio }}'
+                                    )"
+                                >
+                                    + Agregar
+                                </button>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    {% empty %}
+                    <p>No hay productos activos registrados.</p>
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- PEDIDO ACTUAL -->
+        <div class="col-lg-5">
+
+            <div class="pos-panel pos-order-panel">
+
+                <h5 class="fw-bold mb-3">
+                    🛒 Pedido actual
+                </h5>
+
+                <form
+                    method="post"
+                    action="{% url 'registrar_venta' %}"
+                    id="formventa"
+                >
+                    {% csrf_token %}
+
+                    
+<!-- DATOS DEL PEDIDO -->
+<div class="row g-3">
+
+    <!-- CANAL -->
+    <div class="col-12 col-md-6">
+        <label for="canal" class="form-label fw-semibold">
+            Canal de venta
+        </label>
+
+        <select
+            id="canal"
+            class="form-select canal-select"
+        >
+            <option value="local">LOCAL</option>
+            <option value="delivery">DELIVERY</option>
+            <option value="llevar">LLEVAR</option>
+            <option value="pedidosya">PEDIDOSYA</option>
+            <option value="recoger_local">RECOGER LOCAL</option>
+        </select>
+    </div>
+
+    <!-- CLIENTE -->
+    <div class="col-12 col-md-6">
+        <label for="cliente" class="form-label fw-semibold">
+            Cliente
+        </label>
+
+        <input
+            type="text"
+            id="cliente"
+            class="form-control"
+            maxlength="120"
+            placeholder="Nombre del cliente"
+        >
+    </div>
+
+</div>
+
+<!-- UBICACIÓN DE DELIVERY -->
+<div
+    id="datosDelivery"
+    class="delivery-box mt-3"
+    style="display:none;"
+>
+    <h6 class="fw-bold mb-3">
+        📍 Ubicación de entrega
+    </h6>
+
+    <div class="mb-3">
+        <label for="enlaceUbicacion" class="form-label">
+            Enlace de ubicación de WhatsApp
+        </label>
+
+        <input
+            type="text"
+            id="enlaceUbicacion"
+            class="form-control"
+            placeholder="Pega el enlace de Google Maps"
+        >
+    </div>
+
+    <div class="row g-3 mb-3">
+
+        <div class="col-12 col-sm-6">
+            <label for="latitud" class="form-label">
+                Latitud
+            </label>
+
+            <input
+                type="number"
+                step="any"
+                id="latitud"
+                class="form-control"
+                placeholder="-16.500000"
+            >
+        </div>
+
+        <div class="col-12 col-sm-6">
+            <label for="longitud" class="form-label">
+                Longitud
+            </label>
+
+            <input
+                type="number"
+                step="any"
+                id="longitud"
+                class="form-control"
+                placeholder="-68.150000"
+            >
+        </div>
+
+    </div>
+
+    <div class="mb-3">
+        <label for="zonaDelivery" class="form-label">
+            Zona o barrio
+        </label>
+
+        <input
+            type="text"
+            id="zonaDelivery"
+            class="form-control"
+            maxlength="120"
+            placeholder="Ej.: Villa Adela"
+        >
+    </div>
+
+    <div>
+        <label for="referenciaDelivery" class="form-label">
+            Referencia de entrega
+        </label>
+
+        <textarea
+            id="referenciaDelivery"
+            class="form-control"
+            rows="2"
+            maxlength="250"
+            placeholder="Ej.: Frente a una farmacia"
+        ></textarea>
+    </div>
+</div>
+
+
+                    <hr>
+
+                    <div id="carrito" class="cart-list">
+                        <div class="text-center text-muted py-5">
+                            🛒
+                            <p class="mt-2">
+                                No hay productos en el pedido
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label">
+                            Observaciones
+                        </label>
+
+                        <textarea
+                            id="observaciones"
+                            class="form-control"
+                            rows="2"
+                            placeholder="Ej.: Sin picante"
+                        ></textarea>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <span>Subtotal</span>
+                        <strong>
+                            Bs <span id="subtotal">0.00</span>
+                        </strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-2">
+                        <h5>Total</h5>
+                        <div class="cart-total">
+                            Bs <span id="total">0.00</span>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-yellow w-100 mt-3"
+                        onclick="abrirCobro()"
+                    >
+                        💰 Realizar venta
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary w-100 mt-2"
+                        onclick="limpiarCarrito()"
+                    >
+                        Restablecer pedido
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- VENTANA DE COBRO -->
+<div class="modal fade" id="modalCobro" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">PAGAR</h5>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                ></button>
+            </div>
+
+            <div class="modal-body p-4">
+
+                <h4 class="text-center text-muted">
+                    TOTAL A COBRAR
+                </h4>
+
+                <div class="payment-total text-center mb-4">
+                    Bs <span id="totalCobro">0.00</span>
+                </div>
+
+                <hr>
+
+                <label class="form-label fw-bold">
+                    Método de pago
+                </label>
+
+                <select
+                    id="metodo"
+                    class="form-select mb-3"
+                    onchange="actualizarMetodo()"
+                >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="transferencia">
+                        Transferencia bancaria
+                    </option>
+                    <option value="credito">
+                        Pago posterior (crédito)
+                    </option>
+                    <option value="efectivo_tarjeta">
+                        Efectivo + Tarjeta
+                    </option>
+                    <option value="efectivo_transferencia">
+                        Efectivo + Transferencia
+                    </option>
+                    <option value="efectivo_credito">
+                        Efectivo + Pago posterior
+                    </option>
+                    <option value="credito_transferencia">
+                        Pago posterior + Transferencia
+                    </option>
+                </select>
+
+                <div id="camposPago"></div>
+
+                <div class="d-flex justify-content-between mt-3">
+                    <strong>Cambio:</strong>
+                    <h4 class="text-warning">
+                        Bs <span id="cambio">0.00</span>
+                    </h4>
+                </div>
+
+                <div id="errorPago"
+                     class="alert alert-danger d-none mt-3">
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="button"
+                    id="confirmarVenta"
+                    class="btn-yellow"
+                    onclick="confirmarCobro()"
+                >
+                    Aceptar y registrar venta
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+const items = new Map();
+let modalCobro = null;
+let enviando = false;
+
+function dinero(valor) {
+    return Number(valor).toFixed(2);
+}
+
+function totalPedido() {
+    return [...items.values()].reduce(
+        (suma, item) => suma + item.precio * item.cantidad,
+        0
+    );
+}
+
+function agregar(id, nombre, precio) {
+    const item = items.get(id) || {
+        id: id,
+        nombre: nombre,
+        precio: Number(String(precio).replace(',', '.')),
+        cantidad: 0
+    };
+
+    item.cantidad++;
+    items.set(id, item);
+    dibujar();
+}
+
+function cambiar(id, cantidad) {
+    const item = items.get(id);
+    if (!item) return;
+
+    item.cantidad += cantidad;
+
+    if (item.cantidad <= 0) {
+        items.delete(id);
+    }
+
+    dibujar();
+}
+
+function dibujar() {
+    const carrito = document.getElementById('carrito');
+    carrito.replaceChildren();
+
+    if (!items.size) {
+        carrito.innerHTML =
+            '<div class="text-center text-muted py-5">' +
+            '🛒<p>No hay productos en el pedido</p></div>';
+    }
+
+    items.forEach(item => {
+        const fila = document.createElement('div');
+        fila.className =
+            'cart-item d-flex justify-content-between align-items-center';
+
+        const detalle = document.createElement('div');
+
+        const nombre = document.createElement('strong');
+        nombre.textContent = item.nombre;
+
+        const precio = document.createElement('div');
+        precio.className = 'text-muted small';
+        precio.textContent =
+            `Bs ${dinero(item.precio)} × ${item.cantidad}`;
+
+        detalle.append(nombre, precio);
+
+        const controles = document.createElement('div');
+        controles.className = 'd-flex gap-1';
+
+        const menos = document.createElement('button');
+        menos.type = 'button';
+        menos.className = 'btn btn-sm btn-outline-secondary';
+        menos.textContent = '−';
+        menos.onclick = () => cambiar(item.id, -1);
+
+        const mas = document.createElement('button');
+        mas.type = 'button';
+        mas.className = 'btn btn-sm btn-outline-secondary';
+        mas.textContent = '+';
+        mas.onclick = () => cambiar(item.id, 1);
+
+        controles.append(menos, mas);
+        fila.append(detalle, controles);
+        carrito.appendChild(fila);
+    });
+
+    document.getElementById('subtotal').textContent =
+        dinero(totalPedido());
+
+    document.getElementById('total').textContent =
+        dinero(totalPedido());
+}
+
+function limpiarCarrito() {
+    items.clear();
+    dibujar();
+}
+
+document.getElementById('buscarProducto')
+    .addEventListener('input', function() {
+
+        const texto = this.value.toLowerCase();
+
+        document.querySelectorAll('.producto-item')
+            .forEach(producto => {
+
+                producto.style.display =
+                    producto.dataset.nombre.includes(texto)
+                    ? ''
+                    : 'none';
+
+            });
+    });
+
+function abrirCobro() {
+    if (!items.size) {
+        alert('Primero agrega productos al pedido.');
+        return;
+    }
+
+    document.getElementById('totalCobro').textContent =
+        dinero(totalPedido());
+
+    document.getElementById('metodo').value = 'efectivo';
+
+    actualizarMetodo();
+
+    modalCobro = bootstrap.Modal.getOrCreateInstance(
+        document.getElementById('modalCobro')
+    );
+
+    modalCobro.show();
+}
+
+function componentesMetodo() {
+    const metodo = document.getElementById('metodo').value;
+
+    const nombres = {
+        efectivo: 'Efectivo recibido',
+        tarjeta: 'Tarjeta',
+        transferencia: 'Transferencia bancaria',
+        credito: 'Pago posterior'
+    };
+
+    return metodo.split('_').map(clave => ({
+        clave: clave,
+        nombre: nombres[clave]
+    }));
+}
+
+function actualizarMetodo() {
+    const contenedor = document.getElementById('camposPago');
+    contenedor.replaceChildren();
+
+    const partes = componentesMetodo();
+    const total = totalPedido();
+
+    partes.forEach((parte, indice) => {
+        const grupo = document.createElement('div');
+        grupo.className = 'mb-3';
+
+        const etiqueta = document.createElement('label');
+        etiqueta.className = 'form-label';
+        etiqueta.textContent = parte.nombre + ' (Bs)';
+
+        const entrada = document.createElement('input');
+        entrada.type = 'number';
+        entrada.min = '0';
+        entrada.step = '0.01';
+        entrada.className = 'form-control monto-pago';
+        entrada.dataset.tipo = parte.clave;
+
+        entrada.value =
+            indice === 0 ? dinero(total) : '0.00';
+
+        entrada.addEventListener('input', calcularCambio);
+
+        grupo.append(etiqueta, entrada);
+        contenedor.appendChild(grupo);
+    });
+
+    document.getElementById('errorPago')
+        .classList.add('d-none');
+
+    calcularCambio();
+}
+
+function calcularCambio() {
+    const total = totalPedido();
+    let pagado = 0;
+    let efectivo = 0;
+
+    document.querySelectorAll('.monto-pago')
+        .forEach(campo => {
+            const valor = Number(campo.value) || 0;
+
+            pagado += valor;
+
+            if (campo.dataset.tipo === 'efectivo') {
+                efectivo += valor;
+            }
+        });
+
+    const cambio = Math.max(
+        0,
+        Math.min(pagado - total, efectivo)
+    );
+
+    document.getElementById('cambio').textContent =
+        dinero(cambio);
+}
+
+async function confirmarCobro() {
+    if (enviando) return;
+
+    const totalCentavos = Math.round(totalPedido() * 100);
+    const partes = [];
+    let sumaCentavos = 0;
+    let efectivoCentavos = 0;
+
+    for (const campo of document.querySelectorAll('.monto-pago')) {
+        const monto = Number(campo.value);
+
+        if (!campo.value.trim() ||
+            !Number.isFinite(monto) ||
+            monto < 0) {
+            mostrarError('Ingresa montos válidos.');
+            return;
+        }
+
+        const centavos = Math.round(monto * 100);
+        sumaCentavos += centavos;
+
+        if (campo.dataset.tipo === 'efectivo') {
+            efectivoCentavos += centavos;
+        }
+
+        partes.push({
+            metodo: campo.dataset.tipo,
+            monto: dinero(centavos / 100)
+        });
+    }
+
+    if (sumaCentavos < totalCentavos) {
+        mostrarError('El pago no cubre el total de la venta.');
+        return;
+    }
+
+    const excedente = sumaCentavos - totalCentavos;
+
+    if (excedente > efectivoCentavos) {
+        mostrarError(
+            'Solo se puede devolver cambio del efectivo recibido.'
+        );
+        return;
+    }
+
+    const metodo = document.getElementById('metodo').value;
+
+    // Compatibilidad con el backend actual:
+    // Solo efectivo, transferencia y QR están confirmados.
+    const metodosBackend = {
+        efectivo: 'efectivo',
+        transferencia: 'transferencia'
+    };
+
+    if (!metodosBackend[metodo]) {
+        mostrarError(
+            'Este método de pago requiere actualizar primero ' +
+            'la función registrar_venta en views.py.'
+        );
+        return;
+    }
+
+    const form = document.getElementById('formventa');
+
+    const body = {
+        items: [...items.values()].map(item => ({
+            id: item.id,
+            cantidad: item.cantidad
+        })),
+        canal: document.getElementById('canal').value,
+        cliente: document.getElementById('cliente').value,
+        metodo: metodosBackend[metodo],
+        observaciones:
+            document.getElementById('observaciones').value,
+
+ubicacion: {
+    enlace: document.getElementById(
+        'enlaceUbicacion'
+    )?.value || '',
+
+    latitud: document.getElementById(
+        'latitud'
+    )?.value || '',
+
+    longitud: document.getElementById(
+        'longitud'
+    )?.value || '',
+
+    zona: document.getElementById(
+        'zonaDelivery'
+    )?.value || '',
+
+    referencia: document.getElementById(
+        'referenciaDelivery'
+    )?.value || ''
+}
+
+    };
+
+
+    const boton = document.getElementById('confirmarVenta');
+
+    enviando = true;
+    boton.disabled = true;
+    boton.textContent = 'Registrando...';
+
+    try {
+        const respuesta = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': form.querySelector(
+                    '[name=csrfmiddlewaretoken]'
+                ).value
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (respuesta.ok) {
+            window.location.href = respuesta.url;
+        } else {
+            mostrarError(
+                'No se pudo registrar la venta. Revisa el servidor.'
+            );
+        }
+    } catch (error) {
+        mostrarError('Error de conexión con Django.');
+    } finally {
+        enviando = false;
+        boton.disabled = false;
+        boton.textContent = 'Aceptar y registrar venta';
+    }
+}
+
+function mostrarError(mensaje) {
+    const elemento = document.getElementById('errorPago');
+    elemento.textContent = mensaje;
+    elemento.classList.remove('d-none');
+}
+
+function actualizarCamposDelivery() {
+    const canal = document.getElementById('canal');
+    const datosDelivery = document.getElementById('datosDelivery');
+
+    if (!canal || !datosDelivery) return;
+
+    const esDelivery = canal.value === 'delivery';
+
+    datosDelivery.style.display = esDelivery
+        ? 'block'
+        : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const canal = document.getElementById('canal');
+
+    if (canal) {
+        canal.addEventListener(
+            'change',
+            actualizarCamposDelivery
+        );
+
+        actualizarCamposDelivery();
+    }
+});
+</script>
+
+{% endblock %}

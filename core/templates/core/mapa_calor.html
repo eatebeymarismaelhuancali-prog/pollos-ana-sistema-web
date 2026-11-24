@@ -1,0 +1,272 @@
+
+{% extends 'core/base.html' %}
+
+{% block content %}
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+
+<style>
+.geo-card {
+    background: white;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.06);
+}
+
+.geo-title {
+    font-weight: 800;
+}
+
+.geo-demo {
+    background: #fff5d6;
+    border-left: 5px solid #ff8c00;
+    padding: 14px;
+    border-radius: 9px;
+    margin-bottom: 20px;
+}
+
+.geo-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.geo-stat {
+    background: #fff9eb;
+    border-radius: 12px;
+    padding: 18px;
+    border-top: 4px solid #ffc107;
+}
+
+.geo-stat strong {
+    display: block;
+    font-size: 26px;
+    color: #dc2626;
+}
+
+#mapaCalor {
+    width: 100%;
+    height: 540px;
+    border-radius: 12px;
+    z-index: 1;
+}
+
+.geo-legend {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.geo-legend span {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.geo-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+}
+
+@media (max-width: 700px) {
+    .geo-stats {
+        grid-template-columns: 1fr;
+    }
+
+    #mapaCalor {
+        height: 400px;
+    }
+}
+</style>
+
+<div class="mb-4">
+    <h2 class="geo-title">
+        🗺️ Análisis Geoespacial
+    </h2>
+    <p class="text-muted">
+        Zonas de mayor demanda de pedidos delivery
+    </p>
+</div>
+
+<div class="geo-card">
+
+    <div class="geo-demo">
+        <strong>Modo demostración</strong>
+        <div>
+            Los puntos mostrados son simulados.
+            No representan ventas reales de POLLOS ANA.
+        </div>
+    </div>
+
+    <div class="geo-stats">
+
+        <div class="geo-stat">
+            Pedidos simulados
+            <strong id="totalPedidosDemo">0</strong>
+        </div>
+
+        <div class="geo-stat">
+            Zonas de ejemplo
+            <strong>4</strong>
+        </div>
+
+        <div class="geo-stat">
+            Mayor concentración simulada
+            <strong style="font-size:20px">
+                Villa Adela
+            </strong>
+        </div>
+
+    </div>
+
+    <h5 class="fw-bold mb-3">
+        🔥 Mapa de calor de pedidos
+    </h5>
+
+    <div id="mapaCalor"></div>
+
+    <div class="geo-legend">
+        <span>
+            <i class="geo-dot"
+               style="background:#ffc107"></i>
+            Baja demanda
+        </span>
+        <span>
+            <i class="geo-dot"
+               style="background:#ff8c00"></i>
+            Demanda media
+        </span>
+        <span>
+            <i class="geo-dot"
+               style="background:#dc2626"></i>
+            Alta demanda
+        </span>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const mapa = L.map('mapaCalor').setView(
+        [-16.510, -68.175],
+        12
+    );
+
+    // Mapa base alternativo
+    L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        {
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 19
+        }
+    ).addTo(mapa);
+
+    // Centros aproximados para una simulación visual
+    const zonas = [
+        {
+            nombre: 'Villa Adela',
+            lat: -16.529,
+            lon: -68.184,
+            pedidos: 65
+        },
+        {
+            nombre: 'Ciudad Satélite',
+            lat: -16.523,
+            lon: -68.151,
+            pedidos: 35
+        },
+        {
+            nombre: 'La Ceja',
+            lat: -16.505,
+            lon: -68.163,
+            pedidos: 48
+        },
+        {
+            nombre: '16 de Julio',
+            lat: -16.493,
+            lon: -68.173,
+            pedidos: 20
+        }
+    ];
+
+    // Generador reproducible de puntos simulados
+    let semilla = 12345;
+
+    function aleatorio() {
+        semilla = (semilla * 16807) % 2147483647;
+        return (semilla - 1) / 2147483646;
+    }
+
+    const puntos = [];
+
+    zonas.forEach(zona => {
+
+        for (let i = 0; i < zona.pedidos; i++) {
+
+            const lat = zona.lat +
+                (aleatorio() - 0.5) * 0.012;
+
+            const lon = zona.lon +
+                (aleatorio() - 0.5) * 0.012;
+
+            puntos.push([lat, lon, 1]);
+        }
+
+        L.circleMarker(
+            [zona.lat, zona.lon],
+            {
+                radius: 5,
+                color: '#ffffff',
+                weight: 2,
+                fillColor: '#dc2626',
+                fillOpacity: 1
+            }
+        )
+        .addTo(mapa)
+        .bindPopup(
+            '<strong>' + zona.nombre + '</strong>' +
+            '<p>Pedidos simulados: ' +
+            zona.pedidos + '</p>'
+        );
+    });
+
+    L.heatLayer(puntos, {
+        radius: 35,
+        blur: 25,
+        maxZoom: 16,
+        max: 1.5,
+        minOpacity: 0.25,
+        gradient: {
+            0.2: '#ffc107',
+            0.5: '#ff8c00',
+            0.8: '#dc2626',
+            1.0: '#a00000'
+        }
+    }).addTo(mapa);
+
+    document.getElementById(
+        'totalPedidosDemo'
+    ).textContent = puntos.length;
+
+    setTimeout(function () {
+        mapa.invalidateSize();
+    }, 200);
+
+});
+</script>
+
+{% endblock %}
